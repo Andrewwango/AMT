@@ -98,37 +98,28 @@ for p=1:1:length(partials)
 end
 
 hold on
-%scatter(spect(:,1), spect(:,2))%, spect(:,3)) %time, frequency plot
 for p=1:1:length(partials)
     %scatter(linspace(partials(p).start_time, partials(p).end_time, 200), ones(200,1)*partials(p).freq, 5, 'MarkerEdgeColor',[0.5 0 0], 'MarkerFaceColor',[0.5 0 0]);
     %text(partials(p).end_time, partials(p).freq, string(p));
 end
 
-X = zeros(length(partials), 2);
 for p=1:1:length(partials)
-    X(p,:) = [partials(p).start_time partials(p).end_time];
-end
-for p=1:1:length(partials)
-    for i=1:1:round(mean(partials(p).amps)/0.1)
+    X = [partials(p).start_time partials(p).end_time];
+    for i=1:1:round(mean(partials(p).amps)/0.1 - 1)
         X = [X ; partials(p).start_time partials(p).end_time];
     end
 end
 
 [idx,C] = kmeans(X,2);
-idx = idx(1:length(partials));
+idx = idx(1:length(partials))
 plot(C(:,1),C(:,2), 'kx', 'MarkerSize',15,'LineWidth',3)
 
-%Create harmony objects
-
-%Correlate harmony partials with numbers to obtain partial patters
-
-%Create partial patterns
-
 %plot
-for p=1:1:length(partials)
-    if idx(p) == 1
-        scatter(partials(p).start_time, partials(p).end_time, 'r');
-    elseif idx(p) == 2
-        scatter(partials(p).start_time, partials(p).end_time, 'g');
-    end
+%scatter(spect(:,1), spect(:,2))%, spect(:,3)) %time, frequency plot
+X = zeros(length(partials), 2);
+for p=1:1:length(partials(idx == 1))
+    scatter(partials(p).start_time, partials(p).end_time, 'r');
+end
+for p=1:1:length(partials(idx == 2))
+    scatter(partials(p).start_time, partials(p).end_time, 'g');
 end
