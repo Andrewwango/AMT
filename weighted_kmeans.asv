@@ -1,0 +1,12 @@
+function [idx,C,sumd]=weighted_kmeans(X,W,k)
+
+orig_len
+%apply weights
+for i=1:1:length(X)
+    for j=1:1:round(W(i)/0.1)
+        X = [X ; partials(i).start_time partials(i).end_time];
+    end
+end
+
+[idx,C] = kmeans(X, k_clusters);
+idx = idx(1:length(partials));
