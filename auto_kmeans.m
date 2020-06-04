@@ -21,10 +21,7 @@ end
 
 D = (SS-SS(1))/(SS(end)-SS(1));
 %plot(D,'b*--');
-f = find(D>0.9);
-K = f(1);
-IDXs
-Cs
+K = find(D>0.9, 1);
 IDX = IDXs{K, min_is(K)};
 C = Cs{K, min_is(K)};
 

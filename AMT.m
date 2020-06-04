@@ -1,19 +1,18 @@
-fmax = 4410;
-fNyq = fmax * 2;
-t_d = 1;
-t_s = 1/30;
+fmax = 4410; %max frequency content
+fNyq = fmax * 2; %min sampling frequency
+t_c = 1;
+t_w = 1/30;
 [x,fs] = audioread("C:\Users\mcgivyw\Desktop\AMT\piano-1.wav");
 x = x(:,1); %stereo to mono
 x_lp = lowpass(x, fmax, fs);
 x_ds = downsample(x_lp, fs/fNyq);
+fs = fNyq;
 
 c = 4;
-chunk = x_ds(t_d*fNyq*(c-1)+1:t_d*fNyq*(c)+2);
-wft = abs(WindowFT(chunk, t_s*fNyq, t_s*fNyq, 'Gaussian'));
-close
-%stft(discretisation, fNyq, 'FFTLength', 8820, 'Window',rectwin(t_s*fNyq),'OverlapLength',0);
-wft = wft(1:(t_d*fNyq/2+1),:);
-wft = wft(1:min(round(equaltemper(999999999)), end), :);
+chunk_start = (c-1) * t_c / t_w;
+chunk = x_ds(t_c*fs*(c-1)+1:t_c*fs*c+2);
+wft = abs(WindowFT(chunk, t_w*fs, t_w*fs, 'Gaussian'));
+wft = wft(1:min(round(equaltemper(999999999)), (t_c*fs/2+1)), :); %truncate to useful frequency content
 
 spect = [];
 partials = {};
@@ -48,7 +47,6 @@ partials = partials(([partials.end_time] - [partials.start_time] >= 2) & ([parti
 
 %split long partials
 hold on
-ps = [5 6 11 22 14];
 for p=1:1:length(partials)
     %plot(linspace(partials(p).start_time, partials(p).end_time, length(partials(p).amps)), partials(p).amps)
     %plot(partials(p).start_time, partials(p).amps(1), 'ro')    
@@ -85,12 +83,12 @@ end
 
 %cluster
 [idx,C,k_clusters] = auto_kmeans([[partials.start_time].' [partials.end_time].'], cellfun(@mean, {partials.amps}).');
-
+C = C + chunk_start;
 
 %Create harmony objects
 for k=1:1:k_clusters
     children = partials((idx==k)&(sum(abs((C(k,:) - [partials.start_time; partials.end_time].')),2)<500));
-    scatter([children.start_time], [children.end_time], cellfun(@mean, {children.amps})*20);
+    scatter(chunk_start+[children.start_time], chunk_start+[children.end_time], cellfun(@mean, {children.amps})*20);
     harmonies = [harmonies harmony(C(k,1), C(k,2), [children.freq], cellfun(@mean, {children.amps}))];
     string(min([children.freq])) + " Hz: " + string(C(k,2)-C(k,1))
 end
