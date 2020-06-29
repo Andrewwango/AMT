@@ -9,7 +9,7 @@ for i=1:1:length(X)
 end
 
 %cluster
-[idx,C, sumd] = kmeans(Y, K);
+[idx,C, sumd] = kmeans(Y, K, 'MaxIter', 100);
 
 %remove weights
 idx = idx(1:length(X));

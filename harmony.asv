@@ -63,43 +63,6 @@ classdef harmony
                ((h2.start_time - h1.start_time > -2) && (h2.end_time - h1.end_time < 2));
         end
         
-        function [CURR, DELETE_PREV, DELETE_CURR]=check_similar(prev_harmonies, curr_harmonies)
-            mark_for_deletion_p = zeros(1, length(prev_harmonies));
-            mark_for_deletion_c = zeros(1, length(curr_harmonies));
-            
-            %merge similar and overlapping harmonies
-            for h_c=1:1:length(curr_harmonies)
-                for h_p=1:1:length(prev_harmonies)
-                    if curr_harmonies(h_c).similar(prev_harmonies(h_p))
-                        curr_harmonies(h_c) = curr_harmonies(h_c) + prev_harmonies(h_p);
-                        mark_for_deletion_p(h_p) = 1;
-                    elseif harmony.overlap(curr_harmonies(h_c), prev_harmonies(h_p))
-                        if curr_harmonies(h_c).duration() > prev_harmonies(h_p).duration()
-                            mark_for_deletion_p(h_p) =1;
-                        else
-                            mark_for_deletion_c(h_c) =1;
-                        end
-                    end
-                end
-            end
-            CURR = curr_harmonies;
-            DELETE_PREV = mark_for_deletion_p;
-            DELETE_CURR = mark_for_deletion_c;
-        end
-        
-        function plot_all_harmonies(all_harmonies, cs)
-            hold on
-            for h2=1:1:length(all_harmonies)
-                harmonies = all_harmonies{h2};
-                cs(h2)
-                for h=1:1:length(harmonies)
-                    plot([harmonies(h).start_time harmonies(h).end_time], repelem(min(harmonies(h).freqs),2), 'o-');
-                    text(harmonies(h).end_time, min(harmonies(h).freqs), name_note(min(harmonies(h).freqs)));
-                    disp(name_note(sort(harmonies(h).freqs)))
-                    disp([num2str(harmonies(h).start_time), " ", num2str(harmonies(h).end_time)])                     
-                end
-            end
-        end
-
+        function [CURR, DELETE_PREV, DELETE_CURR]=check_
     end
 end

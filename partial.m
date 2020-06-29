@@ -12,5 +12,9 @@ classdef partial
             obj.freq = freq;
             obj.amps = amps;
         end
+        function a=avg_amp(obj)
+            %a = cellfun(@mean, {obj.amps}); %mean of each individual partial
+            a = mean([obj.amps]); %concatenate all peaks together
+        end
     end
 end

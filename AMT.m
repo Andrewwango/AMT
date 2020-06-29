@@ -1,114 +1,55 @@
 fmax = 4410; %max frequency content
 fNyq = fmax * 2; %min sampling frequency
 t_c = 1;
-t_w = 1/30;
-[x,fs] = audioread("C:\Users\mcgivyw\Desktop\AMT\piano-1.wav");
+t_w = 1/15;
+[x,fs] = audioread("C:\Users\mcgivyw\Desktop\AMT\pianopiano-1.wav");
 x = x(:,1); %stereo to mono
 x_lp = lowpass(x, fmax, fs);
 x_ds = downsample(x_lp, fs/fNyq);
 fs = fNyq;
 
-c = 4;
-chunk_start = (c-1) * t_c / t_w;
-chunk = x_ds(t_c*fs*(c-1)+1:t_c*fs*c+2);
-wft = abs(WindowFT(chunk, t_w*fs, t_w*fs, 'Gaussian'));
-wft = wft(1:min(round(equaltemper(999999999)), (t_c*fs/2+1)), :); %truncate to useful frequency content
+cs = 1:0.5:floor(length(x_ds)/(t_c*fs));
+all_harmonies = cell(1, length(cs));
+warning('off','signal:findpeaks:largeMinPeakHeight')
 
-spect = [];
-partials = {};
-harmonies = {};
-for i = 1:1:size(wft,2)
-    y_i = wft(:,i);
-
-    %peak detection
-    [~, peak_freqs] = findpeaks(movmean(y_i,30), 'MinPeakProminence', 0.2);
-    peak_amps = y_i(peak_freqs);
-    note_freqs = equaltemper(peak_freqs);
+for i = 3%1:1:length(cs)
+    c = cs(i);
+    % Obtain wft
+    chunk_start = (c-1) * t_c / t_w;
+    chunk = x_ds(t_c*fs*(c-1)+1:t_c*fs*c+2);
+       
+    wft = abs(WindowFT(chunk, t_w*fs, t_w*fs, 'Gaussian'));
+    wft = wft(1:min(round(equaltemper(999999999)), (t_c*fs/2+1)), :); %truncate to useful frequency content
     
-    for j = 1:1:length(peak_freqs)
-        spect = [spect ; i note_freqs(j) peak_amps(j)];
-        new_p = true;
-        for p = 1:1:length(partials)
-            if (partials(p).end_time == i-1 | partials(p).end_time == i-2) & abs(partials(p).freq - note_freqs(j)) <= 0.1
-                partials(p).end_time = i;
-                partials(p).amps = [partials(p).amps peak_amps(j)];
-                new_p = false;
-                break
-            end
-        end
-        if new_p == true
-            partials = [partials partial(i, i, note_freqs(j), [peak_amps(j)])];
-        end
-    end
-end
-
-%filter
-partials = partials(([partials.end_time] - [partials.start_time] >= 2) & ([partials.freq] > equaltemper(0)));
-
-%split long partials
-hold on
-for p=1:1:length(partials)
-    %plot(linspace(partials(p).start_time, partials(p).end_time, length(partials(p).amps)), partials(p).amps)
-    %plot(partials(p).start_time, partials(p).amps(1), 'ro')    
-    
-    late_attack = movmean(partials(p).amps, 3);
-    v = [diff(late_attack) 0];
-    late_attack(v<mean(v)+2*std(v)) = 0; %get rises and falls
-    late_attack(1:round(length(late_attack)/3)) = 0; %not in initial attack or decay
-    new_ps = find([0 diff(logical(late_attack))==1]) + partials(p).start_time; %detect edges
-    
-    %plot(linspace(partials(p).start_time, partials(p).end_time, length(partials(p).amps)), [0 diff(logical(late_attack))==1])
-    
-    if isempty(new_ps)
+    partials = create_partials(wft);
+    if isempty(partials)
         continue
-    else
-        new_ps = new_ps(1);
     end
     
-    %modify partials
-    partials = [partials partial(new_ps, partials(p).end_time, partials(p).freq, partials(p).amps(new_ps-partials(p).start_time:end))];
-    partials(p).end_time = new_ps - 1;
-    partials(p).amps = partials(p).amps(1:new_ps-partials(p).start_time-1);
+    harmonies = create_harmonies(partials, chunk_start, chunk_start+t_c/t_w, mean(abs(fft(chunk))));
+    
+    if c > 1
+        prev_harmonies = all_harmonies{i-1};
+        [harmonies, mark_for_deletion_p, mark_for_deletion_c] = harmony.check_similar(prev_harmonies, harmonies);
+        all_harmonies{i-1} = prev_harmonies(~mark_for_deletion_p);
+        harmonies = harmonies(~mark_for_deletion_c);
+    end
+    
+    all_harmonies{i} = harmonies;
 end
 
-% hold on
-% scatter(spect(:,1), spect(:,2))%, spect(:,3)) %time, frequency plot
-% for p=1:1:length(partials)
-%     scatter(linspace(partials(p).start_time, partials(p).end_time, 200), ones(200,1)*partials(p).freq, 5, 'MarkerEdgeColor',[0.5 0 0], 'MarkerFaceColor',[0.5 0 0]);
-%     text(partials(p).end_time, partials(p).freq, string(partials(p).freq));
-% end
-% return
-% scatter([partials.start_time], [partials.end_time], cellfun(@mean, {partials.amps})*10);
-% return
-
-%cluster
-[idx,C,k_clusters] = auto_kmeans([[partials.start_time].' [partials.end_time].'], cellfun(@mean, {partials.amps}).');
-C = C + chunk_start;
-
-%Create harmony objects
-for k=1:1:k_clusters
-    children = partials((idx==k)&(sum(abs((C(k,:) - [partials.start_time; partials.end_time].')),2)<500));
-    scatter(chunk_start+[children.start_time], chunk_start+[children.end_time], cellfun(@mean, {children.amps})*20);
-    harmonies = [harmonies harmony(C(k,1), C(k,2), [children.freq], cellfun(@mean, {children.amps}))];
-    string(min([children.freq])) + " Hz: " + string(C(k,2)-C(k,1))
+for i = 3%1:1:length(cs)
+    harmonies = all_harmonies{i};
+    for h=1:1:length(harmonies)
+        fit_patterns(harmonies(h));
+    end
 end
-legend(string(1:1:k_clusters))
-plot(C(:,1),C(:,2), 'kx', 'MarkerSize',15,'LineWidth',3)
 
 return
-%Add to partial pattern
-my_partialpattern = partialpattern;
-for h=1:1:length(harmonies)
-    pattern = zeros(1,10);
-    ffreq = min(harmonies(h).freqs);
-    for i=1:1:my_partialpattern.pattern_len
-        f = find(harmonies(h).freqs==equaltemper(ffreq*i));
-        if ~isempty(f)
-            pattern(i) = harmonies(h).avg_amps(f(1));
-        end
-    end
-    my_partialpattern = update_pattern(my_partialpattern, pattern);
-    a = plot(pattern, 'o-');
-    label(a, string(ffreq));
-end
-plot(my_partialpattern.avg_pattern, '*-')
+figure
+harmony.plot_all_harmonies(all_harmonies, cs)
+
+return
+figure
+my_partialpattern = partialpattern.all_harmonies_to_pattern(all_harmonies);
+plot(my_partialpattern.avg_pattern(), '*-')

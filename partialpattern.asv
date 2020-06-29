@@ -28,11 +28,7 @@ classdef partialpattern
     end
     
     methods(Static)
-        function patt_n=normalise(patt)
-            patt_=patt/sum(patt);
-        end
         function p=all_harmonies_to_pattern(all_harmonies)
-            hold on
             p = partialpattern;
             for h2=1:1:length(all_harmonies)
                 harmonies = all_harmonies{h2};
@@ -46,17 +42,15 @@ classdef partialpattern
                             pattern(i) = harmonies(h).avg_amps(f(1));
                         end
                     end
-                    pattern = partialpattern.normalise(pattern);
+                    pattern=pattern/sum(pattern);
                     if sum(pattern==0)>6
                         continue
                     end
                     p = p.append(pattern);
 
-                    a = plot(p.latest(), 'o-');
+                    a = plot(my_partialpattern.latest(), 'o-');
                     label(a, string(ffreq));
                     %string(string(ffreq) + " Hz, s: " + string(harmonies(h).start_time) + ", t: " + string(harmonies(h).end_time-harmonies(h).start_time))
                 end
             end
-        end
-    end
 end

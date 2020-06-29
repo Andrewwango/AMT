@@ -1,0 +1,57 @@
+function harmonies = create_harmonies(partials, cstart, cend, energy_thresh)
+harmonies = [];
+%cluster
+[idx,C,k_clusters] = auto_kmeans([[partials.start_time].' [partials.end_time].'/2], cellfun(@median, {partials.amps}).');
+C(:,2) = C(:,2) * 2;
+C = C + cstart;
+
+ignore_ks = zeros(1,k_clusters);
+
+%Find which ks to ignore
+for k=1:1:k_clusters
+    children = partials((idx==k) & cclose(C(k,:)-cstart, [partials.start_time; partials.end_time].'));
+    %time: should be audibly long, all substantials will always be found
+    %freqs: shows it's at least one note!
+    %energy: could be spurious outliers in cluster
+    if  (diff(C(k,:)) < 4) || (length(children) < 5) || (max(cellfun(@median, {children.amps})) < energy_thresh)
+        ignore_ks(k) = 1;
+    end 
+end
+%Create harmony objects
+for k=1:1:k_clusters
+    if ignore_ks(k) == 1
+        continue
+    end
+    k_centre = C(k,:);
+    children = partials((idx==k) & cclose(k_centre-cstart, [partials.start_time; partials.end_time].'));
+
+    %Check for neighbouring clusters
+    for k2=1:1:k_clusters
+        if k2==k || ignore_ks(k2) == 1
+            continue
+        end
+        if cclose(k_centre, C(k2,:))
+            ignore_ks(k2) = 1;
+            k_centre = mean([k_centre; C(k2,:)]);
+            children = [children partials((idx==k2) & cclose(C(k2,:)-cstart, [partials.start_time; partials.end_time].'))];
+        end
+    end
+    
+    new_harmony = harmony(k_centre(1), k_centre(2), [children.freq], cellfun(@median, {children.amps}));
+    harmonies = [harmonies new_harmony];
+    
+    %scatter(cstart+[children.start_time], cstart+[children.end_time], cellfun(@median, {children.amps})*20);
+    %plot(k_centre(1),k_centre(2), 'kx', 'MarkerSize',15,'LineWidth',3)
+end
+
+end
+
+function close_logical=cclose(c1, c2)
+    close_logical = sum(abs((c1 - c2)),2) < 5;
+end
+function crop=crop_harmony(x, cstart, cend, lower, upper)
+clen = cend-cstart;
+lower = cstart + clen*lower/100;
+upper = cstart + clen*upper/100;
+crop = min(max(x, lower),upper);
+end
