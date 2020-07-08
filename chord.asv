@@ -30,13 +30,17 @@ classdef chord
             best_assignments = cell(1, MAX_V);
             for v=1:MAX_V
                 v
-                instrument_assignment = create_iterator_matrix(v, length(varargin), true);
+                instrument_assignment = create_iterator_matrix(v, length(varargin), );
                 best_assignments{v} = {};
                 for i_a=1:1:size(instrument_assignment, 1)
                     w0=repelem(20, v);
                     ppatterns = varargin(instrument_assignment(i_a, :));
-                    if v > 1, prev_best = best_assignments{v-1}.freq_ass; else, prev_best = []; end
-                    freq_assignment = create_iterator_matrix(v, length(freqs), false, prev_best);
+                    if v > 1
+                        prev_best = best_assignments{v-1}.freq_ass;
+                    else
+                        prev_best = [];
+                    end
+                    freq_assignment = create_iterator_matrix(v, length(freqs), prev_best);
                     likelihoods = zeros(1, size(freq_assignment,1));
                     tic
                     for i_f=1:1:size(freq_assignment, 1)
@@ -52,8 +56,7 @@ classdef chord
                     best_assignments{v}{end+1} = struct( ...
                         'instr_ass', instrument_assignment(i_a,:), ...
                         'freq_ass', freq_assignment(I_F,:), ...
-                        'lhood', -lmax, ...
-                        'vol', w);
+                        'lhood', -lmax);
                 end
                 [~,I_A] = max(cellfun(@(x)x.lhood, best_assignments{v}));
                 best_assignments{v} = best_assignments{v}{I_A};
@@ -73,7 +76,7 @@ end
 
 function iterator_matrix=create_iterator_matrix(n_voices, n_freqs, repeats, varargin)
 if nargin > 3 && ~isempty(varargin{1})
-    submat = create_iterator_matrix(n_voices-length(varargin{1}), n_freqs, repeats);
+    submat = create_iterator_matrix(n_voices-nargin+3, n_freqs, repeats);
     iterator_matrix = [repmat(sort(varargin{1}), size(submat, 1), 1) submat];
 else
     iterator_matrix = zeros(n_freqs^n_voices, n_voices);

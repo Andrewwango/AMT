@@ -22,6 +22,17 @@ classdef partialpattern
         function p=avg_pattern(obj)
             p = median(obj.patterns, 1);
         end
+        function s=std_pattern(obj)
+            s = std(obj.patterns, 1);
+        end
+        function p=avg_n(obj)
+            p = avg_pattern(obj);
+            p = p/p(1);
+        end
+        function s=std_n(obj)
+            avg = obj.avg_pattern();
+            s = obj.std_pattern() / avg(1);
+        end 
         function p=latest(obj)
             p = obj.patterns(end,:);
         end
@@ -29,7 +40,7 @@ classdef partialpattern
     
     methods(Static)
         function patt_n=normalise(patt)
-            patt_=patt/sum(patt);
+            patt_n=patt/sum(patt);
         end
         function p=all_harmonies_to_pattern(all_harmonies)
             hold on
@@ -52,11 +63,12 @@ classdef partialpattern
                     end
                     p = p.append(pattern);
 
-                    a = plot(p.latest(), 'o-');
-                    label(a, string(ffreq));
+                    %a = plot(p.latest(), 'o-');
+                    %label(a, string(ffreq));
                     %string(string(ffreq) + " Hz, s: " + string(harmonies(h).start_time) + ", t: " + string(harmonies(h).end_time-harmonies(h).start_time))
                 end
             end
+            %plot(p.avg_pattern(), '*-')
         end
     end
 end
