@@ -1,11 +1,11 @@
 function harmonies = create_harmonies(partials, cstart, cend, energy_thresh)
 harmonies = [];
-%figure
-%hold on
+figure
+hold on
 %cluster
-y_scale = 3;
-[idx,C,k_clusters] = auto_kmeans([[partials.start_time].' [partials.end_time].'/y_scale], cellfun(@median, {partials.amps}).');
-C(:,2) = C(:,2) * y_scale;
+y_compression = 3;
+[idx,C,k_clusters] = auto_kmeans([[partials.start_time].' [partials.end_time].'/2], cellfun(@median, {partials.amps}).');
+C(:,2) = C(:,2) * y_compression;
 C = C + cstart;
 
 ignore_ks = zeros(1,k_clusters);
@@ -19,7 +19,6 @@ for k=1:1:k_clusters
     if  (diff(C(k,:)) < 4) || (length(children) < 3) || (max(cellfun(@median, {children.amps})) < energy_thresh)
        ignore_ks(k) = 1;
     end 
-%time filter needs automatic tweaking based on maxtempo, window freq
 end
 %Create harmony objects
 for k=1:1:k_clusters
@@ -46,14 +45,14 @@ for k=1:1:k_clusters
     new_harmony = harmony(k_centre(1), k_centre(2), [children.freq], cellfun(@median, {children.amps}));
     harmonies = [harmonies new_harmony];
     
-    %scatter(cstart+[children.start_time], cstart+[children.end_time], cellfun(@median, {children.amps})*20);
-    %plot(k_centre(1),k_centre(2), 'kx', 'MarkerSize',15,'LineWidth',3)
+    scatter(cstart+[children.start_time], cstart+[children.end_time], cellfun(@median, {children.amps})*20);
+    plot(k_centre(1),k_centre(2), 'kx', 'MarkerSize',15,'LineWidth',3)
 end
 
 end
 
 function close_logical=cclose(c1, c2)
-    close_logical = sum(abs((c1 - c2)),2) < 5;
+    close_logical = sum(abs((c1 - c2)),2) < 500;
 end
 function crop=crop_harmony(x, cstart, cend, lower, upper)
 clen = cend-cstart;

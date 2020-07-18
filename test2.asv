@@ -1,8 +1,0 @@
-function iterator_matrix=test2(n_voices, n_freqs)
-iterator_matrix = zeros(n_freqs^n_voices, n_voices);
-for v_i = 1:1:n_voices
-    for i = 1:1:
-    iterator_matrix(:,v_i) = 
-    repmat(repelem(1:1:n_freqs, n_freqs^(n_voices-v_i)), 1, n_freqs^(v_i-1));
-end
-end

@@ -2,6 +2,7 @@ classdef chord
     properties
         ffreqs
         loudnesses
+        instruments
         start_time
         end_time
     end
@@ -10,8 +11,8 @@ classdef chord
             if nargin > 1
                 obj.ffreqs = varargin{1};
                 obj.loudnesses = varargin{2};
-                obj.start_time = varargin{3};
-                obj.end_time = varargin{4};
+                obj.start_time = varargin{4};
+                obj.end_time = varargin{5};
             else %input harmony
                 obj.ffreqs = [];
                 obj.loudnesses = [];
@@ -26,21 +27,17 @@ classdef chord
             amps = harmony.avg_amps;           
             
             %iterate through number of voices
-            MAX_V = 3;
+            MAX_V = 2;
             best_assignments = cell(1, MAX_V);
             for v=1:MAX_V
                 v
-                instrument_assignment = create_iterator_matrix(v, length(varargin), );
+                instrument_assignment = create_iterator_matrix(v, length(varargin), true);
                 best_assignments{v} = {};
                 for i_a=1:1:size(instrument_assignment, 1)
                     w0=repelem(20, v);
                     ppatterns = varargin(instrument_assignment(i_a, :));
-                    if v > 1
-                        prev_best = best_assignments{v-1}.freq_ass;
-                    else
-                        prev_best = [];
-                    end
-                    freq_assignment = create_iterator_matrix(v, length(freqs), prev_best);
+                    if v > 1, prev_best = best_assignments{v-1}.freq_ass; else, prev_best = []; end
+                    freq_assignment = create_iterator_matrix(v, length(freqs), false, prev_best);
                     likelihoods = zeros(1, size(freq_assignment,1));
                     tic
                     for i_f=1:1:size(freq_assignment, 1)
@@ -56,7 +53,8 @@ classdef chord
                     best_assignments{v}{end+1} = struct( ...
                         'instr_ass', instrument_assignment(i_a,:), ...
                         'freq_ass', freq_assignment(I_F,:), ...
-                        'lhood', -lmax);
+                        'lhood', -lmax, ...
+                        'vol', w);
                 end
                 [~,I_A] = max(cellfun(@(x)x.lhood, best_assignments{v}));
                 best_assignments{v} = best_assignments{v}{I_A};
@@ -65,10 +63,10 @@ classdef chord
             celldisp(best_assignments)
             
             AICs = (3*(1:1:MAX_V)) - log(cellfun(@(x)x.lhood, best_assignments))
-            
+            [best_v, ~] = min(AICs);
             %choose the v with highest AIC
-            fitted.ffreqs = freqs(1:2);
-            fitted.loudnesses = amps(1:2);
+            fitted.ffreqs = freqs(best_assignments{best_v}.freq_ass);
+            fitted.loudnesses = best_assignments{best_v}.vol;
             
         end
     end
@@ -76,7 +74,7 @@ end
 
 function iterator_matrix=create_iterator_matrix(n_voices, n_freqs, repeats, varargin)
 if nargin > 3 && ~isempty(varargin{1})
-    submat = create_iterator_matrix(n_voices-nargin+3, n_freqs, repeats);
+    submat = create_iterator_matrix(n_voices-length(varargin{1}), n_freqs, repeats);
     iterator_matrix = [repmat(sort(varargin{1}), size(submat, 1), 1) submat];
 else
     iterator_matrix = zeros(n_freqs^n_voices, n_voices);
@@ -87,15 +85,10 @@ else
         iterator_matrix = unique(sort(iterator_matrix, 2), 'rows');
     end
 end
-%only get rows containing must_include
-%must_include = sort(must_include);
-%temp = iterator_matrix(:, 1:length(must_include))
-%iterator_matrix(all(temp == must_include,2), :)
 end
     
 function prob=calc_likelihood(w, freqs, x, f0_assignment, ppatterns)
 prob = 0;
-pros = [];
 for i=1:1:length(freqs)
     mean_p = 0;
     var_p = 0;
@@ -132,9 +125,7 @@ for i=1:1:length(freqs)
         %fprintf("x %f mu %f s %f prob %f \n", x(i), mean_p, sqrt(var_p), pro)  
     end
     prob = prob + pro;
-    pros = [pros pro];
 end
-%prob = mean(pros);
 prob = exp(-0.5 * prob);
 end
 

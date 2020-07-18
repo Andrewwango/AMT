@@ -2,6 +2,7 @@ classdef chord
     properties
         ffreqs
         loudnesses
+        instruments
         start_time
         end_time
     end
@@ -10,11 +11,13 @@ classdef chord
             if nargin > 1
                 obj.ffreqs = varargin{1};
                 obj.loudnesses = varargin{2};
-                obj.start_time = varargin{3};
-                obj.end_time = varargin{4};
+                obj.instruments = varargin{4};
+                obj.start_time = varargin{4};
+                obj.end_time = varargin{5};
             else %input harmony
                 obj.ffreqs = [];
                 obj.loudnesses = [];
+                obj.instruments = [];
                 obj.start_time = varargin{1}.start_time;
                 obj.end_time = varargin{1}.end_time;
             end
@@ -26,7 +29,7 @@ classdef chord
             amps = harmony.avg_amps;           
             
             %iterate through number of voices
-            MAX_V = 3;
+            MAX_V = 2;
             best_assignments = cell(1, MAX_V);
             for v=1:MAX_V
                 v
@@ -62,10 +65,12 @@ classdef chord
             celldisp(best_assignments)
             
             AICs = (3*(1:1:MAX_V)) - log(cellfun(@(x)x.lhood, best_assignments))
+            [~, best_v] = min(AICs);
             
-            %choose the v with highest AIC
-            fitted.ffreqs = freqs(1:2);
-            fitted.loudnesses = amps(1:2);
+            %choose the v with lowest AIC
+            fitted.ffreqs = freqs(best_assignments{best_v}.freq_ass);
+            fitted.loudnesses = best_assignments{best_v}.vol;
+            fitted.instruments = best_assignments{best_v}.instr_ass;
             
         end
     end
@@ -84,15 +89,10 @@ else
         iterator_matrix = unique(sort(iterator_matrix, 2), 'rows');
     end
 end
-%only get rows containing must_include
-%must_include = sort(must_include);
-%temp = iterator_matrix(:, 1:length(must_include))
-%iterator_matrix(all(temp == must_include,2), :)
 end
     
 function prob=calc_likelihood(w, freqs, x, f0_assignment, ppatterns)
 prob = 0;
-pros = [];
 for i=1:1:length(freqs)
     mean_p = 0;
     var_p = 0;
@@ -129,9 +129,7 @@ for i=1:1:length(freqs)
         %fprintf("x %f mu %f s %f prob %f \n", x(i), mean_p, sqrt(var_p), pro)  
     end
     prob = prob + pro;
-    pros = [pros pro];
 end
-%prob = mean(pros);
 prob = exp(-0.5 * prob);
 end
 
